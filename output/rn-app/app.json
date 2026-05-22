@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "企业办公助手",
+    "slug": "office-assistant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.company.officeassistant"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#3B82F6"
+      },
+      "package": "com.company.officeassistant"
+    }
+  }
+}

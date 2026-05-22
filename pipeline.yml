@@ -1,0 +1,41 @@
+# ============================================================================
+# 云效 Flow 流水线配置
+# 触发条件：Gitee main 分支有 push 事件时自动执行
+# 使用方法：在云效控制台 "流水线 Flow" → "新建流水线" → "导入 YAML"
+# ============================================================================
+
+name: 企业办公助手-自动部署
+
+# ---- 触发器：仅 main 分支 ----
+trigger:
+  branches:
+    include:
+      - main
+
+# ---- 全局变量 ----
+vars:
+  SERVER_IP: "124.222.15.25"
+  SERVER_USER: "ubuntu"
+  DEPLOY_SCRIPT: "/home/ubuntu/deploy.sh"
+
+# ---- 阶段定义 ----
+stages:
+  - stage: deploy
+    name: 部署到生产服务器
+    jobs:
+      - job: deploy_via_ssh
+        name: SSH远程执行部署脚本
+        timeout: 300
+        steps:
+          # Step 1: 通过主机组执行部署脚本
+          # 前提：已在云效 "主机组管理" 中创建名为 "腾讯云-生产服务器" 的主机组
+          #       并将 124.222.15.25 添加为主机，安装 Runner
+          - step: RunScriptOnHost
+            name: 执行部署脚本
+            with:
+              hostGroup: "腾讯云-生产服务器"
+              script: |
+                echo "===== 云效流水线触发 ====="
+                echo "触发时间: $(date '+%Y-%m-%d %H:%M:%S')"
+                sudo bash /home/ubuntu/deploy.sh
+              runAsRoot: false

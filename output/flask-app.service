@@ -1,0 +1,31 @@
+[Unit]
+Description=Flask App - Office Assistant Backend
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/quan/output/backend
+EnvironmentFile=/home/ubuntu/quan/output/backend/.env
+Environment="FLASK_ENV=production"
+Environment="DATABASE_URL=mysql+pymysql://root:root@localhost/office_assistant"
+Environment="JWT_SECRET=119f646051cbc5cf586a98d99a858521"
+Environment="SECRET_KEY=a92dabd9e12da26bff08e3eb80086c96"
+ExecStart=/home/ubuntu/quan/output/backend/venv/bin/gunicorn "app:create_app()" \
+    --workers 4 \
+    --bind 0.0.0.0:5000 \
+    --access-logfile /home/ubuntu/quan/output/backend/logs/access.log \
+    --error-logfile /home/ubuntu/quan/output/backend/logs/error.log \
+    --log-level info \
+    --timeout 120
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/ubuntu/quan/output/backend/logs/gunicorn.log
+StandardError=append:/home/ubuntu/quan/output/backend/logs/gunicorn-error.log
+
+[Install]
+WantedBy=multi-user.target
