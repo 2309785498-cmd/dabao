@@ -42,8 +42,26 @@ if [ -f "$PROJECT_DIR/deploy.sh" ]; then
     echo "      deploy.sh 已从仓库同步最新版本"
 fi
 
-# ---- 3. 创建虚拟环境 ----
-echo "[3/6] 配置 Python 虚拟环境..."
+# ---- 3. 创建 .env 文件（gitignore 排除，需自动生成） ----
+echo "[3/7] 检查 .env 文件..."
+ENV_FILE="$BACKEND_DIR/.env"
+if [ ! -f "$ENV_FILE" ]; then
+    cat > "$ENV_FILE" << 'ENVEOF'
+FLASK_APP=app.py
+FLASK_ENV=production
+SECRET_KEY=a92dabd9e12da26bff08e3eb80086c96
+DATABASE_URL=mysql+pymysql://root:root@localhost/office_assistant
+JWT_SECRET=119f646051cbc5cf586a98d99a858521
+JWT_EXPIRATION_HOURS=2
+ENVEOF
+    chmod 600 "$ENV_FILE"
+    echo "      .env 文件已自动创建"
+else
+    echo "      .env 文件已存在，跳过"
+fi
+
+# ---- 4. 创建虚拟环境 ----
+echo "[4/7] 配置 Python 虚拟环境..."
 cd "$BACKEND_DIR"
 if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
@@ -53,17 +71,17 @@ else
 fi
 source "$VENV_DIR/bin/activate"
 
-# ---- 4. 安装依赖 ----
-echo "[4/6] 安装 Python 依赖..."
+# ---- 5. 安装依赖 ----
+echo "[5/7] 安装 Python 依赖..."
 pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
 echo "      依赖安装完成"
 
-# ---- 5. 创建日志目录 ----
+# ---- 6. 创建日志目录 ----
 mkdir -p "$BACKEND_DIR/logs"
 
-# ---- 6. 配置并重启 systemd 服务 ----
-echo "[5/6] 配置 systemd 服务..."
+# ---- 7. 配置并重启 systemd 服务 ----
+echo "[6/7] 配置 systemd 服务..."
 if [ -f "$REPO_SERVICE_FILE" ]; then
     sudo cp "$REPO_SERVICE_FILE" "$SERVICE_FILE"
     sudo systemctl daemon-reload
@@ -72,7 +90,7 @@ else
     echo "      !! 警告: 未找到 $REPO_SERVICE_FILE，跳过服务文件更新"
 fi
 
-echo "[6/6] 重启服务..."
+echo "[7/7] 重启服务..."
 sudo systemctl enable "$SERVICE_NAME" 2>/dev/null || true
 sudo systemctl restart "$SERVICE_NAME"
 

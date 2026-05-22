@@ -106,7 +106,7 @@ DELIMITER ;
 -- 管理员: admin / admin123
 -- bcrypt hash for 'admin123' (12 rounds)
 INSERT INTO `admin` (`username`, `password_hash`, `role`) VALUES
-('admin', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYqVr/qvIrK', 'admin');
+('admin', '$2b$12$ywcOjie5v1u7inQn1BthfupHH9NpopYOM8KVsEF3qypUPTvayikua', 'admin');
 
 -- 示例员工
 INSERT INTO `employees` (`name`, `age`, `email`, `created_at`) VALUES
