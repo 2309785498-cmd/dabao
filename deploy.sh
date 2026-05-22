@@ -7,7 +7,7 @@
 set -e
 
 # ---- 配置 ----
-REPO_URL="https://highly-paid-programmer:37bee881b7a6af470f84d5e1c251c849@gitee.com/highly-paid-programmer/quan.git"
+REPO_URL="https://highly-paid-programmers:37bee881b7a6af470f84d5e1c251c849@gitee.com/highly-paid-programmers/quan.git"
 PROJECT_DIR="/home/ubuntu/quan"
 BACKEND_DIR="$PROJECT_DIR/output/backend"
 VENV_DIR="$BACKEND_DIR/venv"
