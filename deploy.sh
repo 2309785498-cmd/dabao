@@ -34,12 +34,24 @@ fi
 
 echo "      当前 commit: $(git rev-parse --short HEAD)"
 
-# ---- 2. 自更新部署脚本 ----
-echo "[2/6] 更新部署脚本..."
+# ---- 2. 自更新部署脚本 & 自动部署文件 ----
+echo "[2/7] 更新部署脚本..."
 if [ -f "$PROJECT_DIR/deploy.sh" ]; then
     cp "$PROJECT_DIR/deploy.sh" /home/ubuntu/deploy.sh
     chmod +x /home/ubuntu/deploy.sh
-    echo "      deploy.sh 已从仓库同步最新版本"
+    echo "      deploy.sh 已同步"
+fi
+if [ -f "$PROJECT_DIR/auto-deploy.sh" ]; then
+    cp "$PROJECT_DIR/auto-deploy.sh" /home/ubuntu/auto-deploy.sh
+    chmod +x /home/ubuntu/auto-deploy.sh
+    echo "      auto-deploy.sh 已同步"
+fi
+if [ -f "$PROJECT_DIR/auto-deploy.service" ]; then
+    sudo cp "$PROJECT_DIR/auto-deploy.service" /etc/systemd/system/auto-deploy.service
+    sudo cp "$PROJECT_DIR/auto-deploy.timer" /etc/systemd/system/auto-deploy.timer
+    sudo systemctl daemon-reload
+    sudo systemctl restart auto-deploy.timer
+    echo "      auto-deploy timer 已更新"
 fi
 
 # ---- 3. 创建 .env 文件（gitignore 排除，需自动生成） ----

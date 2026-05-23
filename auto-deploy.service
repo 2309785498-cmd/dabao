@@ -1,0 +1,10 @@
+[Unit]
+Description=Auto Deploy Poller — check Gitee for new commits
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/bin/bash /home/ubuntu/auto-deploy.sh
+StandardOutput=append:/home/ubuntu/quan/output/backend/logs/auto-deploy.log
+StandardError=append:/home/ubuntu/quan/output/backend/logs/auto-deploy.log
