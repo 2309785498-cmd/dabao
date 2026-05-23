@@ -89,11 +89,30 @@ pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
 echo "      依赖安装完成"
 
-# ---- 6. 创建日志目录 ----
+# ---- 6. 构建并部署前端 ----
+echo "[6/8] 构建前端..."
+FRONTEND_SRC="$PROJECT_DIR"
+FRONTEND_DIST="$FRONTEND_SRC/dist"
+FRONTEND_WWW="/var/www/flask-app"
+
+if [ -f "$FRONTEND_SRC/package.json" ]; then
+    cd "$FRONTEND_SRC"
+    pnpm install --quiet 2>&1 | tail -1
+    pnpm build 2>&1 | tail -3
+    sudo rm -rf "$FRONTEND_WWW"
+    sudo mkdir -p "$FRONTEND_WWW"
+    sudo cp -r "$FRONTEND_DIST"/* "$FRONTEND_WWW"/
+    sudo chown -R www-data:www-data "$FRONTEND_WWW"
+    echo "      前端构建并部署完成"
+else
+    echo "      跳过前端（无 package.json）"
+fi
+
+# ---- 7. 创建日志目录 ----
 mkdir -p "$BACKEND_DIR/logs"
 
-# ---- 7. 配置并重启 systemd 服务 ----
-echo "[6/7] 配置 systemd 服务..."
+# ---- 8. 配置并重启 systemd 服务 ----
+echo "[7/8] 配置 systemd 服务..."
 if [ -f "$REPO_SERVICE_FILE" ]; then
     sudo cp "$REPO_SERVICE_FILE" "$SERVICE_FILE"
     sudo systemctl daemon-reload
@@ -102,7 +121,7 @@ else
     echo "      !! 警告: 未找到 $REPO_SERVICE_FILE，跳过服务文件更新"
 fi
 
-echo "[7/7] 重启服务..."
+echo "[8/8] 重启服务..."
 sudo systemctl enable "$SERVICE_NAME" 2>/dev/null || true
 sudo systemctl restart "$SERVICE_NAME"
 
