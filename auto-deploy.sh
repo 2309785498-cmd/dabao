@@ -6,6 +6,9 @@
 # ============================================================================
 set -e
 
+# 解决首次以 root 克隆后 ubuntu 用户无法操作 git 的问题
+git config --global --add safe.directory /home/ubuntu/quan 2>/dev/null || true
+
 REPO_URL="https://highly-paid-programmers:37bee881b7a6af470f84d5e1c251c849@gitee.com/highly-paid-programmers/quan.git"
 PROJECT_DIR="/home/ubuntu/quan"
 LOCK_FILE="/tmp/auto-deploy.lock"
