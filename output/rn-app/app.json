@@ -15,6 +15,23 @@
         "backgroundColor": "#3B82F6"
       },
       "package": "com.company.officeassistant"
-    }
+    },
+    "owner": "2309785498",
+    "extra": {
+      "eas": {
+        "projectId": "b0718e69-5f54-442e-90bc-8da49ed04cc9"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b0718e69-5f54-442e-90bc-8da49ed04cc9",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": "1.0.0",
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
   }
 }

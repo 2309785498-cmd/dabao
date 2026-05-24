@@ -1,0 +1,114 @@
+name: Publish to Expo Go (EAS Update)
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      message:
+        description: '更新说明'
+        required: false
+        default: '手动发布'
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  publish-expo-go:
+    name: EAS Update → Expo Go
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'output/rn-app/package-lock.json'
+
+      - name: Install npm dependencies
+        working-directory: output/rn-app
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Publish EAS Update
+        id: eas-update
+        working-directory: output/rn-app
+        run: |
+          UPDATE_MSG="${{ github.event.inputs.message || format('CI #{0} — {1}', github.run_number, github.sha) }}"
+
+          # Remove any root-level app.json that might interfere
+          rm -f ../app.json
+
+          echo "Publishing update..."
+          echo "Message: ${UPDATE_MSG}"
+
+          RESULT=$(eas update \
+            --branch main \
+            --message "${UPDATE_MSG}" \
+            --auto \
+            --json 2>&1)
+
+          echo "$RESULT"
+
+          # Extract info from JSON response
+          ANDROID_UPDATE_ID=$(echo "$RESULT" | jq -r '.[] | select(.platform=="android") | .id' 2>/dev/null || echo "N/A")
+          GROUP_ID=$(echo "$RESULT" | jq -r '.[0].group // "N/A"' 2>/dev/null || echo "N/A")
+
+          echo "android_update_id=${ANDROID_UPDATE_ID}" >> $GITHUB_OUTPUT
+          echo "group_id=${GROUP_ID}" >> $GITHUB_OUTPUT
+
+          echo "Publish successful!"
+          echo "  Group: ${GROUP_ID}"
+          echo "  Android Update: ${ANDROID_UPDATE_ID}"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Generate Job Summary
+        run: |
+          OWNER="2309785498"
+          SLUG="office-assistant"
+
+          EXPO_GO_URL="exp://exp.host/@${OWNER}/${SLUG}?channel-name=main"
+          WEB_URL="https://expo.dev/@${OWNER}/${SLUG}?channel-name=main"
+          ENCODED_URL=$(node -e "console.log(encodeURIComponent('${EXPO_GO_URL}'))")
+          QR_URL="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${ENCODED_URL}"
+
+          {
+            echo "# 企业办公助手 — Expo Go"
+            echo ""
+            echo "## 构建信息"
+            echo ""
+            echo "| 项目 | 值 |"
+            echo "|------|-----|"
+            echo "| App | ${SLUG} |"
+            echo "| Owner | ${OWNER} |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Build # | ${{ github.run_number }} |"
+            echo "| Update Group | \`${{ steps.eas-update.outputs.group_id }}\` |"
+            echo ""
+            echo "## 扫码打开（Expo Go）"
+            echo ""
+            echo "![QR Code](${QR_URL})"
+            echo ""
+            echo "> **操作步骤：**"
+            echo "> 1. 手机上安装 **Expo Go**（[iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)）"
+            echo "> 2. 打开 Expo Go，扫描上方二维码"
+            echo "> 3. 应用即时加载，无需安装 APK"
+            echo ""
+            echo "## 链接"
+            echo ""
+            echo "- **Expo Go 打开:** [${EXPO_GO_URL}](${EXPO_GO_URL})"
+            echo "- **网页查看:** [${WEB_URL}](${WEB_URL})"
+          } >> $GITHUB_STEP_SUMMARY
