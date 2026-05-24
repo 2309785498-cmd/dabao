@@ -13,7 +13,7 @@ export default function LoginScreen() {
   const [secureText, setSecureText] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const { login } = useAuth();
-  const { control, handleSubmit, formState: { errors } } = useForm();
+  const { control, handleSubmit } = useForm();
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -31,33 +31,6 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
-
-  const renderInput = ({ field, label, placeholder, secure = false }) => (
-    <View style={styles.fieldWrap}>
-      <Text style={globalStyles.label}>{label}</Text>
-      <View style={styles.inputRow}>
-        <TextInput
-          style={[globalStyles.input, errors[field] && globalStyles.inputError, { flex: 1 }]}
-          placeholder={placeholder}
-          placeholderTextColor={COLORS.textMuted}
-          secureTextEntry={secure && secureText}
-          autoCapitalize="none"
-          {...control.register(field, { required: `${label}不能为空` })}
-          onChangeText={(val) => control.setValue(field, val, { shouldValidate: true })}
-          defaultValue=""
-        />
-        {secure && (
-          <TouchableOpacity
-            style={styles.eyeBtn}
-            onPress={() => setSecureText(!secureText)}
-          >
-            <Text style={styles.eyeText}>{secureText ? '👁' : '🙈'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      {errors[field] && <Text style={globalStyles.errorText}>{errors[field].message}</Text>}
-    </View>
-  );
 
   return (
     <KeyboardAvoidingView
@@ -84,14 +57,53 @@ export default function LoginScreen() {
           control={control}
           name="username"
           rules={{ required: '请输入用户名' }}
-          render={() => renderInput({ field: 'username', label: '用户名', placeholder: '请输入用户名' })}
+          defaultValue=""
+          render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
+            <View style={styles.fieldWrap}>
+              <Text style={globalStyles.label}>用户名</Text>
+              <TextInput
+                style={[globalStyles.input, error && globalStyles.inputError]}
+                placeholder="请输入用户名"
+                placeholderTextColor={COLORS.textMuted}
+                autoCapitalize="none"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+              />
+              {error && <Text style={globalStyles.errorText}>{error.message}</Text>}
+            </View>
+          )}
         />
 
         <Controller
           control={control}
           name="password"
           rules={{ required: '请输入密码' }}
-          render={() => renderInput({ field: 'password', label: '密码', placeholder: '请输入密码', secure: true })}
+          defaultValue=""
+          render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
+            <View style={styles.fieldWrap}>
+              <Text style={globalStyles.label}>密码</Text>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={[globalStyles.input, error && globalStyles.inputError, { flex: 1 }]}
+                  placeholder="请输入密码"
+                  placeholderTextColor={COLORS.textMuted}
+                  secureTextEntry={secureText}
+                  autoCapitalize="none"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setSecureText(!secureText)}
+                >
+                  <Text style={styles.eyeText}>{secureText ? '👁' : '🙈'}</Text>
+                </TouchableOpacity>
+              </View>
+              {error && <Text style={globalStyles.errorText}>{error.message}</Text>}
+            </View>
+          )}
         />
 
         <TouchableOpacity
