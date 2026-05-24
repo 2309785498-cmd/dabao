@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://10.0.2.2:5000/api'; // Android 模拟器用 10.0.2.2, iOS 用 localhost
+const BASE_URL = 'http://124.222.15.25/api'; // 生产服务器
 
 const client = axios.create({
   baseURL: BASE_URL,
