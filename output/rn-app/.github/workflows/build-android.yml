@@ -1,0 +1,121 @@
+name: Build APK & Distribute
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  JAVA_VERSION: '17'
+
+jobs:
+  build-apk:
+    name: Build APK & Upload to Pgyer
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'output/rn-app/package-lock.json'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0 ndk;26.1.10909125 cmake;3.22.1'
+
+      - name: Install npm dependencies
+        working-directory: output/rn-app
+        run: npm ci --legacy-peer-deps
+
+      - name: Decode keystore
+        working-directory: output/rn-app/android/app
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
+            echo "Keystore decoded"
+          else
+            echo "::warning::KEYSTORE_BASE64 not set, using debug keystore"
+          fi
+
+      - name: Build Release APK
+        working-directory: output/rn-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew app:assembleRelease
+        env:
+          RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/output/rn-app/android/app/release.keystore
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: office-assistant-release
+          path: output/rn-app/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload to Pgyer (蒲公英)
+        id: pgyer
+        if: env.PGYER_API_KEY != ''
+        run: |
+          APK="output/rn-app/android/app/build/outputs/apk/release/app-release.apk"
+          RESPONSE=$(curl --fail-with-body -s \
+            -F "file=@${APK}" \
+            -F "_api_key=${{ secrets.PGYER_API_KEY }}" \
+            -F "buildInstallType=2" \
+            -F "buildUpdateDescription=Build #${{ github.run_number }}" \
+            https://www.pgyer.com/apiv2/app/upload)
+
+          echo "Response: $RESPONSE"
+          CODE=$(echo "$RESPONSE" | jq -r '.code')
+          if [ "$CODE" != "0" ]; then
+            echo "::error::Upload failed: $(echo "$RESPONSE" | jq -r '.message')"
+            exit 1
+          fi
+
+          SHORTCUT=$(echo "$RESPONSE" | jq -r '.data.buildShortcutUrl')
+          QRCODE=$(echo "$RESPONSE" | jq -r '.data.buildQRCodeURL')
+          echo "shortcut=$SHORTCUT" >> $GITHUB_OUTPUT
+          echo "qrcode=$QRCODE" >> $GITHUB_OUTPUT
+        env:
+          PGYER_API_KEY: ${{ secrets.PGYER_API_KEY }}
+
+      - name: Job Summary
+        run: |
+          {
+            echo "# 企业办公助手 - Android APK"
+            echo ""
+            echo "| 项目 | 值 |"
+            echo "|------|-----|"
+            echo "| Build | #${{ github.run_number }} |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo ""
+            echo "## 下载安装"
+            echo ""
+            echo "**下载链接:** ${{ steps.pgyer.outputs.shortcut }}"
+            echo ""
+            echo "![QR Code](${{ steps.pgyer.outputs.qrcode }})"
+            echo ""
+            echo "> 1. 手机扫码 → 浏览器打开 → 点击下载安装"
+            echo "> 2. 首次安装需允许"安装未知来源应用""
+          } >> $GITHUB_STEP_SUMMARY
