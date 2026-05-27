@@ -1,0 +1,57 @@
+name: iOS IPA Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: output/rn-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate iOS project
+        run: npx expo prebuild -p ios --no-install
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build archive
+        run: |
+          cd ios
+          xcodebuild archive \
+            -workspace "$(find . -maxdepth 1 -name '*.xcworkspace' | head -1)" \
+            -scheme "$(xcodebuild -list -workspace "$(find . -maxdepth 1 -name '*.xcworkspace' | head -1)" -json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['workspace']['schemes'][0])")" \
+            -configuration Release \
+            -archivePath ../ios.xcarchive \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package IPA
+        run: |
+          mkdir Payload
+          cp -r ios.xcarchive/Products/Applications/*.app Payload/
+          zip -r mobile-office-assistant.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: output/rn-app/mobile-office-assistant.ipa
