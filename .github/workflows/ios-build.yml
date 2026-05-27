@@ -42,7 +42,21 @@ jobs:
             -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            > /tmp/xcodebuild.log 2>&1
+          BUILD_EXIT=$?
+          echo "=== ERRORS & WARNINGS ==="
+          grep -E "error:|warning:" /tmp/xcodebuild.log | head -100 || echo "(none)"
+          echo "=== LAST 30 LINES ==="
+          tail -30 /tmp/xcodebuild.log
+          echo "=== BUILD RESULT ==="
+          echo "xcodebuild exit code: $BUILD_EXIT"
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo "BUILD FAILED"
+            exit 1
+          fi
+          echo "BUILD SUCCEEDED"
+          ls -la ../ios.xcarchive/Products/Applications/
 
       - name: Package IPA
         run: |
