@@ -6,7 +6,6 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
-    timeout-minutes: 45
     defaults:
       run:
         working-directory: output/rn-app
@@ -42,40 +41,13 @@ jobs:
             -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            DEVELOPMENT_TEAM="" \
-            CODE_SIGN_STYLE=Manual \
-            > build.log 2>&1
-          RC=$?
-          echo "=== ERRORS & WARNINGS ==="
-          grep -E "(error:|warning:)" build.log | head -50
-          echo "=== LAST 20 LINES ==="
-          tail -20 build.log
-          echo "=== RESULT ==="
-          echo "xcodebuild exit code: $RC"
-          if [ $RC -ne 0 ]; then
-            echo "XCODEBUILD FAILED"
-            exit $RC
-          fi
-          echo "XCODEBUILD SUCCEEDED"
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Package IPA
         run: |
-          echo "=== Find .app ==="
-          find . -name "*.app" -type d 2>/dev/null || echo "no .app found"
-          ls -la ios.xcarchive/ 2>/dev/null || echo "no ios.xcarchive"
-          ls -la ios.xcarchive/Products/ 2>/dev/null || echo "no Products"
-          ls -la ios.xcarchive/Products/Applications/ 2>/dev/null || echo "no Applications"
-          APP=$(find . -path "*/Products/Applications/*.app" -type d | head -1)
-          if [ -z "$APP" ]; then
-            echo "ERROR: Cannot find .app file"
-            exit 1
-          fi
-          echo "Found app at: $APP"
           mkdir Payload
-          cp -r "$APP" Payload/
+          cp -r ios.xcarchive/Products/Applications/*.app Payload/
           zip -r mobile-office-assistant.ipa Payload
-          echo "IPA created: $(ls -lh mobile-office-assistant.ipa)"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
