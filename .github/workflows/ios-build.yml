@@ -52,9 +52,21 @@ jobs:
 
       - name: Package IPA
         run: |
+          echo "=== Find .app ==="
+          find . -name "*.app" -type d 2>/dev/null || echo "no .app found"
+          ls -la ios.xcarchive/ 2>/dev/null || echo "no ios.xcarchive"
+          ls -la ios.xcarchive/Products/ 2>/dev/null || echo "no Products"
+          ls -la ios.xcarchive/Products/Applications/ 2>/dev/null || echo "no Applications"
+          APP=$(find . -path "*/Products/Applications/*.app" -type d | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: Cannot find .app file"
+            exit 1
+          fi
+          echo "Found app at: $APP"
           mkdir Payload
-          cp -r ios.xcarchive/Products/Applications/*.app Payload/
+          cp -r "$APP" Payload/
           zip -r mobile-office-assistant.ipa Payload
+          echo "IPA created: $(ls -lh mobile-office-assistant.ipa)"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
