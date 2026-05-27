@@ -61,13 +61,14 @@ jobs:
             exit 1
           fi
           echo "Found: $APP"
+          mkdir -p ../ios-build
           mkdir Payload
           cp -r "$APP" Payload/
-          zip -r mobile-office-assistant.ipa Payload
-          echo "IPA: $(ls -lh mobile-office-assistant.ipa)"
+          zip -r ../ios-build/mobile-office-assistant.ipa Payload
+          echo "IPA: $(ls -lh ../ios-build/mobile-office-assistant.ipa)"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
-          path: output/rn-app/mobile-office-assistant.ipa
+          path: output/ios-build/mobile-office-assistant.ipa
