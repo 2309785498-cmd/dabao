@@ -19,49 +19,55 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: output/rn-app/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('output/rn-app/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Clean previous build
+        run: |
+          rm -rf ios/
+          rm -rf ../ios-build/Payload ../ios-build/mobile-office-assistant.ipa
+
       - name: Generate iOS project
-        run: npx expo prebuild -p ios --no-install
+        run: npx expo prebuild -p ios --clean
 
       - name: Install CocoaPods
         run: |
           cd ios
           pod install
 
-      - name: Disable code signing
+      - name: Get scheme name
+        id: scheme
         run: |
           cd ios
-          /usr/libexec/PlistBuddy -c "Set :objects:13B07F941A680F5B00A75B9A:buildSettings:CODE_SIGN_STYLE Manual" app.xcodeproj/project.pbxproj 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :objects:13B07F941A680F5B00A75B9A:buildSettings:CODE_SIGN_IDENTITY ''" app.xcodeproj/project.pbxproj 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :objects:13B07F941A680F5B00A75B9A:buildSettings:PROVISIONING_PROFILE_SPECIFIER ''" app.xcodeproj/project.pbxproj 2>/dev/null || true
-          echo "Signing disabled"
+          SCHEME=$(xcodebuild -list -workspace *.xcworkspace | awk '/Schemes:/{flag=1; next} flag && NF && !/^$/{print $1; exit}')
+          echo "scheme=$SCHEME" >> $GITHUB_OUTPUT
 
-      - name: Build iOS app
+      - name: Build archive (unsigned)
         run: |
           cd ios
-          xcodebuild build \
-            -workspace app.xcworkspace \
-            -scheme app \
+          xcodebuild archive \
+            -workspace *.xcworkspace \
+            -scheme "${{ steps.scheme.outputs.scheme }}" \
             -configuration Release \
+            -archivePath ../ios.xcarchive \
             -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Package IPA
         run: |
-          APP=$(find "/Users/runner/Library/Developer/Xcode/DerivedData" -path "*/Release-iphoneos/*.app" -type d -name "*.app" | head -1)
-          if [ -z "$APP" ]; then
-            echo "Cannot find .app"
-            exit 1
-          fi
-          echo "Found: $APP"
+          APP_PATH=$(find ios.xcarchive/Products/Applications -name "*.app" -type d)
           mkdir -p ../ios-build
           mkdir Payload
-          cp -r "$APP" Payload/
+          cp -r "$APP_PATH" Payload/
           zip -r ../ios-build/mobile-office-assistant.ipa Payload
           echo "IPA: $(ls -lh ../ios-build/mobile-office-assistant.ipa)"
 
