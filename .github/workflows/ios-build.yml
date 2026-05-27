@@ -41,7 +41,14 @@ jobs:
             -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee build.log | grep -vE "(^Compile|^Libtool|^Ld |^Generate|^CpResource|^Phase|^Process|^Scan|^Touch|^Register)" || true
+          echo "=== LAST 30 LINES ==="
+          tail -30 build.log
+          if ! grep -q "ARCHIVE SUCCEEDED" build.log; then
+            echo "ARCHIVE FAILED - see errors above"
+            exit 1
+          fi
 
       - name: Package IPA
         run: |
