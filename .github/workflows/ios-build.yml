@@ -31,12 +31,27 @@ jobs:
           cd ios
           pod install
 
+      - name: Debug - list generated files
+        run: |
+          echo "=== iOS directory ==="
+          ls -la ios/
+          echo "=== Schemes ==="
+          cd ios
+          xcodebuild -list 2>&1 || true
+
       - name: Build archive
         run: |
           cd ios
+          WORKSPACE=$(find . -maxdepth 1 -name '*.xcworkspace' | head -1)
+          echo "Workspace: $WORKSPACE"
+          SCHEMES=$(xcodebuild -list -workspace "$WORKSPACE" 2>&1)
+          echo "Available schemes:"
+          echo "$SCHEMES"
+          SCHEME=$(echo "$SCHEMES" | sed -n '/Schemes:/,/^$/s/^[[:space:]]*//p' | head -1)
+          echo "Using scheme: $SCHEME"
           xcodebuild archive \
-            -workspace "$(find . -maxdepth 1 -name '*.xcworkspace' | head -1)" \
-            -scheme "$(xcodebuild -list -workspace "$(find . -maxdepth 1 -name '*.xcworkspace' | head -1)" -json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['workspace']['schemes'][0])")" \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
             -configuration Release \
             -archivePath ../ios.xcarchive \
             -sdk iphoneos \
