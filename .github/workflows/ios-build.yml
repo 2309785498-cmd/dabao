@@ -30,6 +30,14 @@ jobs:
           cd ios
           pod install
 
+      - name: Disable code signing
+        run: |
+          cd ios
+          /usr/libexec/PlistBuddy -c "Set :objects:13B07F941A680F5B00A75B9A:buildSettings:CODE_SIGN_STYLE Manual" app.xcodeproj/project.pbxproj 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:13B07F941A680F5B00A75B9A:buildSettings:CODE_SIGN_IDENTITY ''" app.xcodeproj/project.pbxproj 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:13B07F941A680F5B00A75B9A:buildSettings:PROVISIONING_PROFILE_SPECIFIER ''" app.xcodeproj/project.pbxproj 2>/dev/null || true
+          echo "Signing disabled"
+
       - name: Build iOS app
         run: |
           cd ios
@@ -41,17 +49,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            DEVELOPMENT_TEAM="" \
-            CODE_SIGN_STYLE=Manual \
-            2>&1 | tee ../build.log | grep -vE "(^Compile|^Libtool|^Ld |^Generate|^CpResource|^Phase|^Process|^Scan|^Touch|^Register)" || true
-          echo "=== LAST 30 LINES ==="
-          tail -30 ../build.log
-          if ! grep -q "BUILD SUCCEEDED" ../build.log; then
-            echo "BUILD FAILED"
-            exit 1
-          fi
-          echo "BUILD SUCCEEDED"
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Package IPA
         run: |
