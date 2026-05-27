@@ -30,31 +30,41 @@ jobs:
           cd ios
           pod install
 
-      - name: Build archive
+      - name: Build iOS app
         run: |
           cd ios
-          xcodebuild archive \
+          xcodebuild build \
             -workspace app.xcworkspace \
             -scheme app \
             -configuration Release \
-            -archivePath ../ios.xcarchive \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            2>&1 | tee build.log | grep -vE "(^Compile|^Libtool|^Ld |^Generate|^CpResource|^Phase|^Process|^Scan|^Touch|^Register)" || true
+            DEVELOPMENT_TEAM="" \
+            CODE_SIGN_STYLE=Manual \
+            2>&1 | tee ../build.log | grep -vE "(^Compile|^Libtool|^Ld |^Generate|^CpResource|^Phase|^Process|^Scan|^Touch|^Register)" || true
           echo "=== LAST 30 LINES ==="
-          tail -30 build.log
-          if ! grep -q "ARCHIVE SUCCEEDED" build.log; then
-            echo "ARCHIVE FAILED - see errors above"
+          tail -30 ../build.log
+          if ! grep -q "BUILD SUCCEEDED" ../build.log; then
+            echo "BUILD FAILED"
             exit 1
           fi
+          echo "BUILD SUCCEEDED"
 
       - name: Package IPA
         run: |
+          APP=$(find "/Users/runner/Library/Developer/Xcode/DerivedData" -path "*/Release-iphoneos/*.app" -type d -name "*.app" | head -1)
+          if [ -z "$APP" ]; then
+            echo "Cannot find .app"
+            exit 1
+          fi
+          echo "Found: $APP"
           mkdir Payload
-          cp -r ios.xcarchive/Products/Applications/*.app Payload/
+          cp -r "$APP" Payload/
           zip -r mobile-office-assistant.ipa Payload
+          echo "IPA: $(ls -lh mobile-office-assistant.ipa)"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
